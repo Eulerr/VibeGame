@@ -7,33 +7,110 @@ model = genai.GenerativeModel('gemini-2.5-flash-preview-04-17')
 
 def create_game(description: str) -> dict:
     """Create a game from natural language description using Gemini."""
+    example_output = {
+        "game_type": "platformer",
+        "mechanics": {
+            "movement": {
+                "type": "platformer",
+                "jump_height": 300,
+                "move_speed": 200,
+                "special_abilities": {
+                    "teleport": {
+                        "range": 200,
+                        "cooldown": 5
+                    }
+                }
+            },
+            "combat": {
+                "type": "magic",
+                "spells": {
+                    "fireball": {
+                        "damage": 15,
+                        "range": 300,
+                        "cooldown": 2
+                    }
+                }
+            }
+        },
+        "level_design": {
+            "type": "side_scroller",
+            "difficulty": "medium",
+            "environments": ["castle", "dungeon"],
+            "checkpoints": True
+        },
+        "assets": {
+            "player": "wizard",
+            "enemies": ["skeleton", "ghost"],
+            "environment": "dark_fantasy"
+        }
+    }
+
     prompt = f"""
     Convert this game description into a structured game configuration.
     Focus on extracting game type, mechanics, and assets.
     
     Description: {description}
     
-    Return a JSON with this structure:
+    Return ONLY a valid JSON with this structure:
     {{
         "game_type": "string",
         "mechanics": {{
-            "movement": {{...}},
-            "combat": {{...}},
-            "special_abilities": {{...}}
+            "movement": {{
+                "type": "string",
+                "jump_height": number,
+                "move_speed": number,
+                "special_abilities": {{
+                    "ability_name": {{
+                        "range": number,
+                        "cooldown": number
+                    }}
+                }}
+            }},
+            "combat": {{
+                "type": "string",
+                "spells": {{
+                    "spell_name": {{
+                        "damage": number,
+                        "range": number,
+                        "cooldown": number
+                    }}
+                }}
+            }}
         }},
         "level_design": {{
             "type": "string",
-            "environments": [...]
+            "difficulty": "string",
+            "environments": ["string"],
+            "checkpoints": boolean
         }},
         "assets": {{
             "player": "string",
-            "enemies": [...],
+            "enemies": ["string"],
             "environment": "string"
         }}
     }}
+    
+    Here's an example of the expected output format:
+    {json.dumps(example_output, indent=2)}
+    
+    Important: Include all numeric values and specific details for abilities and spells.
+    Do not include any additional text or explanation, only the JSON.
     """
-    response = model.generate_content(prompt)
-    return json.loads(response.text)
+    
+    try:
+        response = model.generate_content(prompt)
+        # Extract JSON from response
+        response_text = response.text.strip()
+        # Remove any markdown code block markers if present
+        if response_text.startswith('```json'):
+            response_text = response_text[7:]
+        if response_text.endswith('```'):
+            response_text = response_text[:-3]
+        return json.loads(response_text)
+    except Exception as e:
+        print(f"Error: {e}")
+        print("Raw response:", response.text if 'response' in locals() else "No response")
+        return None
 
 def main():
     # Example from interaction plan
@@ -53,6 +130,8 @@ def main():
         with open('game_config.json', 'w') as f:
             json.dump(game_config, f, indent=2)
         print("\nSaved to game_config.json")
+    else:
+        print("Failed to generate game configuration")
 
 if __name__ == "__main__":
     main() 
