@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shooter Scene</title> <!-- Updated Title -->
+    <style>
+        body { margin: 0; overflow: hidden; }
+        canvas { display: block; width: 100vw; height: 100vh; }
+        #score {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 24px;
+            font-family: sans-serif;
+            background-color: rgba(0,0,0,0.5);
+            padding: 5px 10px;
+            border-radius: 5px;
+            z-index: 1; /* Ensure score is above blocker */
+        }
+        #blocker {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            display: flex; /* Use flexbox */
+            justify-content: center; /* Center horizontally */
+            align-items: center; /* Center vertically */
+            z-index: 10; /* Make sure blocker is on top */
+        }
+        #instructions {
+            width: 50%; /* Or adjust as needed */
+            cursor: pointer; /* Indicate it's clickable */
+            text-align: center;
+            color: white;
+            font-family: sans-serif;
+            font-size: 18px;
+            background-color: rgba(0,0,0,0.7);
+            padding: 20px;
+            border-radius: 10px;
+        }
+    </style>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.164.1/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.164.1/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+    <canvas id="game-canvas"></canvas>
+    <div id="score">Score: 0</div>
+    <div id="blocker">
+        <div id="instructions">
+            <span style="font-size:36px">Click to play</span>
+            <br>
+            (W, A, S, D = Move, MOUSE = Look, CLICK = Shoot)
+        </div>
+    </div>
+    <script type="module">
+        import * as THREE from 'three';
+        import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js'; // Import PointerLockControls
+
+        // Basic scene setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87CEEB); // Sky blue background
+
+        const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+        const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('game-canvas'), antialias: true });
+        renderer.setSize( window.innerWidth, window.innerHeight );
+        renderer.shadowMap.enabled = true;
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(5, 10, 7.5);
+        directionalLight.castShadow = true;
+        directionalLight.shadow.mapSize.width = 1024;
+        directionalLight.shadow.mapSize.height = 1024;
+        directionalLight.shadow.camera.near = 0.5;
+        directionalLight.shadow.camera.far = 50;
+        scene.add(directionalLight);
+
+        // Controls - Use PointerLockControls for FPS
+        const controls = new PointerLockControls( camera, document.body );
+        scene.add( controls.getObject() ); // The camera is nested inside this object
+
+        const blocker = document.getElementById( 'blocker' );
+        const instructions = document.getElementById( 'instructions' );
+        blocker.style.display = 'flex'; // Explicitly ensure blocker is visible initially
+
+        instructions.addEventListener( 'click', function () {
+            // console.log('Instructions Clicked - Attempting Pointer Lock...'); // Removed log
+            controls.lock();
+        } );
+
+        controls.addEventListener( 'lock', function () {
+            // console.log('Pointer Locked Successfully'); // Removed log
+            instructions.style.display = 'none';
+            blocker.style.display = 'none';
+        } );
+
+        controls.addEventListener( 'unlock', function () {
+            blocker.style.display = 'flex';
+            // console.log('Pointer Unlocked'); // Removed log
+            instructions.style.display = '';
+        } );
+
+        // Clock for animation delta
+        const clock = new THREE.Clock();
+
+        // Movement State and Variables
+        const moveState = {
+            forward: false,
+            backward: false,
+            left: false,
+            right: false
+        };
+        const moveSpeed = 5.0; // Units per second
+        // const velocity = new THREE.Vector3(); // Velocity vector no longer needed for direct displacement approach - Reverted temporarily
+        const direction = new THREE.Vector3(); // Reusable vector for movement direction
+        const playerHeight = 1.6; // Approximate height of player eyes
+
+        const onKeyDown = ( event ) => {
+            // Removed safety check - was only needed due to prior misplaced log
+            // console.log(`Key Down: ${event.code}`); // Removed log
+            // No need to check controls.isLocked here, state is updated regardless
+            // The check happens in the animate loop before applying movement
+            switch ( event.code ) {
+                case 'ArrowUp':
+                case 'KeyW':
+                    moveState.forward = true;
+                    break;
+                case 'ArrowLeft':
+                case 'KeyA':
+                    moveState.left = true;
+                    break;
+                case 'ArrowDown':
+                case 'KeyS':
+                    moveState.backward = true;
+                    break;
+                case 'ArrowRight':
+                case 'KeyD':
+                    moveState.right = true;
+                    break;
+            }
+        };
+
+        const onKeyUp = ( event ) => {
+            switch ( event.code ) {
+                case 'ArrowUp':
+                case 'KeyW':
+                    moveState.forward = false;
+                    break;
+                case 'ArrowLeft':
+                case 'KeyA':
+                    moveState.left = false;
+                    break;
+                case 'ArrowDown':
+                case 'KeyS':
+                    moveState.backward = false;
+                    break;
+                case 'ArrowRight':
+                case 'KeyD':
+                    moveState.right = false;
+                    break;
+            }
+        };
+
+        document.addEventListener( 'keydown', onKeyDown );
+        document.addEventListener( 'keyup', onKeyUp );
+
+
+        // Score Tracking
+        let score = 0;
+        const scoreElement = document.getElementById('score');
+        function updateScoreDisplay() {
+            scoreElement.textContent = `Score: ${score}`;
+        }
+
+        // --- Scene Content ---
+
+        // Simple Green Floor Plane
+        const planeGeometry = new THREE.PlaneGeometry(100, 100);
+        const planeMaterial = new THREE.MeshStandardMaterial({
+            color: 0x4CAF50,
+            roughness: 0.8,
+            metalness: 0.1
+        });
+        const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+        plane.rotation.x = -Math.PI / 2;
+        plane.position.y = 0;
+        plane.receiveShadow = true;
+        scene.add(plane);
+
+        // Player position is now controlled by PointerLockControls object
+        controls.getObject().position.set(0, playerHeight, 10); // Start player near center, slightly back
+
+        // --- Targets ---
+        const targets = [];
+        const targetGeometry = new THREE.BoxGeometry(1, 1, 1);
+        const respawnRange = 15;
+        const targetYPosition = 0.5; // Sit on the ground
+
+        // Enemy (Red Cube)
+        const enemyMaterial = new THREE.MeshStandardMaterial({ color: "red" });
+        const enemy = new THREE.Mesh(targetGeometry, enemyMaterial);
+        enemy.position.set(5, targetYPosition, -5);
+        enemy.castShadow = true;
+        enemy.userData = { type: 'enemy' };
+        scene.add(enemy);
+        targets.push(enemy);
+
+        // Dynamic Cube (Blue Cube)
+        const dynamicCubeMat = new THREE.MeshStandardMaterial({ color: 'blue' });
+        const dynamicCube = new THREE.Mesh(targetGeometry, dynamicCubeMat);
+        dynamicCube.position.set(-5, targetYPosition, 5);
+        dynamicCube.castShadow = true;
+        dynamicCube.userData = { type: 'dynamic' };
+        scene.add(dynamicCube);
+        targets.push(dynamicCube);
+
+        const rotateSpeed = 0.5; // Rotation speed for the blue cube
+
+        // Function to respawn a target
+        function respawnTarget(target) {
+            target.position.x = THREE.MathUtils.randFloatSpread(respawnRange * 2);
+            target.position.z = THREE.MathUtils.randFloatSpread(respawnRange * 2);
+            target.position.y = targetYPosition;
+            // Basic check to avoid spawning directly on top of the other target
+            targets.forEach(otherTarget => {
+                if (target !== otherTarget && target.position.distanceToSquared(otherTarget.position) < 4) {
+                    //console.log("Respawn collision, trying again..."); // Optional logging
+                    respawnTarget(target); // Recursive call - potential issue if space is tight
+                }
+            });
+        }
+
+        // --- Tree Generation ---
+        const trunkHeight = 1.5;
+        const trunkRadiusBottom = 0.2;
+        const trunkRadiusTop = 0.15;
+        const foliageHeight = 2;
+        const foliageRadius = 0.8;
+        const trunkGeometry = new THREE.CylinderGeometry(trunkRadiusTop, trunkRadiusBottom, trunkHeight, 8);
+        const trunkMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 }); // Brown
+        const foliageGeometry = new THREE.ConeGeometry(foliageRadius, foliageHeight, 8);
+        const foliageMaterial = new THREE.MeshStandardMaterial({ color: 0x228B22 }); // Forest Green
+
+        function createTree(x, z) {
+            const tree = new THREE.Group();
+            const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+            trunk.position.y = trunkHeight / 2;
+            trunk.castShadow = true;
+            trunk.receiveShadow = false;
+            tree.add(trunk);
+            const foliage = new THREE.Mesh(foliageGeometry, foliageMaterial);
+            foliage.position.y = trunkHeight + foliageHeight / 2;
+            foliage.castShadow = true;
+            foliage.receiveShadow = false;
+            tree.add(foliage);
+            tree.position.set(x, 0, z);
+            scene.add(tree);
+            return tree;
+        }
+
+        const numberOfTrees = 25;
+        const spawnRadius = 30;
+        const innerRadius = 5;
+
+        for (let i = 0; i < numberOfTrees; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const radius = innerRadius + Math.random() * (spawnRadius - innerRadius);
+            const x = Math.cos(angle) * radius;
+            const z = Math.sin(angle) * radius;
+            createTree(x, z);
+        }
+
+        // --- Grass Generation ---
+        const grassCount = 20000;
+        const grassArea = 100;
+        const grassBladeHeight = 0.3;
+        const grassBladeWidth = 0.05;
+        const grassGeo = new THREE.PlaneGeometry(grassBladeWidth, grassBladeHeight);
+        grassGeo.translate(0, grassBladeHeight / 2, 0);
+        const positionAttribute = grassGeo.getAttribute('position');
+        for (let i = 0; i < positionAttribute.count; i++) {
+            const y = positionAttribute.getY(i);
+            const bendFactor = 0.5;
+            positionAttribute.setX(i, positionAttribute.getX(i) + (y / grassBladeHeight) * (y / grassBladeHeight) * grassBladeWidth * bendFactor);
+        }
+        grassGeo.computeVertexNormals();
+        const grassMat = new THREE.MeshStandardMaterial({
+            color: 0x006400,
+            side: THREE.DoubleSide,
+            roughness: 0.8,
+            metalness: 0.1,
+        });
+        const grassInstanceMesh = new THREE.InstancedMesh(grassGeo, grassMat, grassCount);
+        grassInstanceMesh.receiveShadow = true;
+        grassInstanceMesh.castShadow = false;
+        const dummy = new THREE.Object3D();
+        const matrix = new THREE.Matrix4();
+        const position = new THREE.Vector3();
+        const quaternion = new THREE.Quaternion();
+        const scale = new THREE.Vector3();
+        const grassAnimData = [];
+
+        for (let i = 0; i < grassCount; i++) {
+            const x = THREE.MathUtils.randFloatSpread(grassArea);
+            const z = THREE.MathUtils.randFloatSpread(grassArea);
+            dummy.position.set(x, 0, z);
+            const initialY = Math.random() * Math.PI * 2;
+            dummy.rotation.set(0, initialY, 0);
+            const scaleVariation = THREE.MathUtils.randFloat(0.8, 1.2);
+            dummy.scale.set(scaleVariation, scaleVariation, scaleVariation);
+            dummy.updateMatrix();
+            grassInstanceMesh.setMatrixAt(i, dummy.matrix);
+            grassAnimData.push({
+                offset: Math.random() * Math.PI * 2,
+                swayFactor: THREE.MathUtils.randFloat(0.01, 0.05),
+                initialY: initialY
+            });
+        }
+        grassInstanceMesh.instanceMatrix.needsUpdate = true;
+        scene.add(grassInstanceMesh);
+
+        // --- Shooting Mechanics ---
+        const bullets = [];
+        const bulletGeometry = new THREE.SphereGeometry(0.1, 8, 8);
+        const bulletMaterial = new THREE.MeshBasicMaterial({ color: 0x333333 }); // Darker grey
+        const bulletSpeed = 50;
+        const bulletMaxDistance = 100;
+        const shootDirection = new THREE.Vector3(); // Reusable vector for direction
+
+        function shootBullet() {
+            // Ensure pointer is locked before shooting - Redundant check as it's in listener, but safe.
+            if (!controls.isLocked) return;
+
+            const bullet = new THREE.Mesh(bulletGeometry, bulletMaterial);
+
+            // Get camera's current position and direction for accurate aiming
+            camera.getWorldPosition(bullet.position); // Start bullet from camera's exact position
+            camera.getWorldDirection(shootDirection); // Get the direction the camera is looking
+
+            // Offset start position slightly forward from the camera to avoid self-collision
+            bullet.position.addScaledVector(shootDirection, 1.0); // Start 1 unit in front of camera
+
+            // Set bullet velocity based on camera direction and defined speed
+            bullet.userData.velocity = shootDirection.clone().multiplyScalar(bulletSpeed);
+            // Store the exact start position for accurate range calculation
+            bullet.userData.startPosition = bullet.position.clone();
+
+            scene.add(bullet);
+            bullets.push(bullet);
+        }
+
+        // Event Listener for Shooting (Primary Mouse Button)
+        document.addEventListener('mousedown', (event) => { // Attach to document
+             // Removed safety check - was only needed due to prior misplaced log
+            // console.log(`Mouse Down: Button ${event.button}, Locked: ${controls.isLocked}`); // Removed log
+            // Check if the main button (usually left, code 0) was clicked AND pointer is locked
+            if (event.button === 0 && controls.isLocked) {
+                shootBullet(); // Fire a bullet if conditions met
+            }
+        });
+
+        // --- End Scene Content ---
+
+        // Reusable quaternions/vectors for animation/collision
+        const yQuaternion = new THREE.Quaternion();
+        const swayQuaternion = new THREE.Quaternion();
+        const combinedQuaternion = new THREE.Quaternion();
+        const swayAxis = new THREE.Vector3(1, 0, 0);
+        const targetBox = new THREE.Box3();
+        const bulletSphere = new THREE.Sphere();
+
+
+        function animate() {
+            requestAnimationFrame( animate );
+            // console.log(`Animate Movement: Locked=${controls.isLocked}, Fwd=${moveState.forward}, Bck=${moveState.backward}, Lft=${moveState.left}, Rgt=${moveState.right}`); // Removed log
+
+            const delta = clock.getDelta();
+            const elapsedTime = clock.getElapsedTime();
+
+            // --- Player Movement Update ---
+            // Only apply movement if the pointer is locked
+            if ( controls.isLocked === true ) {
+                // Calculate movement direction based on state
+                direction.z = Number( moveState.forward ) - Number( moveState.backward );
+                direction.x = Number( moveState.right ) - Number( moveState.left );
+
+                // Prevent diagonal movement being faster
+                direction.normalize();
+
+                // Calculate the displacement for this frame
+                const displacementX = direction.x * moveSpeed * delta;
+                const displacementZ = direction.z * moveSpeed * delta;
+
+                // Apply movement relative to the camera's direction
+                controls.moveRight( displacementX );
+                controls.moveForward( displacementZ );
+
+                // Keep player on the ground plane (or slightly above)
+                controls.getObject().position.y = playerHeight;
+            }
+
+            // Animation logic for dynamic cube (blue)
+            if (dynamicCube && rotateSpeed) {
+                dynamicCube.rotation.x += delta * rotateSpeed;
+                dynamicCube.rotation.y += delta * rotateSpeed;
+            }
+
+            // --- Update Bullets ---
+             for (let i = bullets.length - 1; i >= 0; i--) {
+                const bullet = bullets[i];
+
+                // Move bullet
+                bullet.position.addScaledVector(bullet.userData.velocity, delta);
+
+                // Check distance travelled
+                const distanceTravelled = bullet.position.distanceTo(bullet.userData.startPosition);
+                if (distanceTravelled > bulletMaxDistance) {
+                    scene.remove(bullet);
+                    bullets.splice(i, 1);
+                    continue; // Go to the next bullet
+                }
+
+                // --- Collision Detection ---
+                bulletSphere.center.copy(bullet.position);
+                bulletSphere.radius = bulletGeometry.parameters.radius; // Use correct radius
+
+                let hit = false; // Flag to check if bullet hit anything this frame
+                for (let j = targets.length - 1; j >= 0; j--) {
+                    const target = targets[j];
+                    if (!target) continue; // Should not happen, but safety check
+
+                    targetBox.setFromObject(target); // Update target bounding box
+
+                    if (targetBox.intersectsSphere(bulletSphere)) {
+                        score++;
+                        updateScoreDisplay();
+                        respawnTarget(target); // Respawn the hit target
+
+                        scene.remove(bullet);
+                        bullets.splice(i, 1);
+                        hit = true; // Mark as hit
+                        break; // Bullet hits only one target, exit inner loop
+                    }
+                }
+                // --- End Collision Detection ---
+
+                // If bullet hit, continue to the next bullet in the outer loop
+                if (hit) continue;
+
+            }
+            // --- End Update Bullets ---
+
+            // --- Grass Waving Animation ---
+            const time = elapsedTime * 0.8;
+            for (let i = 0; i < grassCount; i++) {
+                grassInstanceMesh.getMatrixAt(i, matrix);
+                matrix.decompose(position, quaternion, scale);
+                const anim = grassAnimData[i];
+                const waveFactor = Math.sin(time + anim.offset + (position.x + position.z) * 0.1);
+                const swayAngle = waveFactor * anim.swayFactor;
+                swayQuaternion.setFromAxisAngle(swayAxis, swayAngle);
+                yQuaternion.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, anim.initialY); // Use initial random Y rotation
+                combinedQuaternion.multiplyQuaternions(yQuaternion, swayQuaternion); // Combine rotations
+                matrix.compose(position, combinedQuaternion, scale);
+                grassInstanceMesh.setMatrixAt(i, matrix);
+            }
+            grassInstanceMesh.instanceMatrix.needsUpdate = true;
+            // --- End Grass Waving Animation ---
+
+            // No controls.update() needed for PointerLockControls when used this way
+            renderer.render( scene, camera );
+        }
+        animate();
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+    </script>
+</body>
+</html>

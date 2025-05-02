@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sandbox Scene</title> <!-- Updated Title -->
+    <style>
+        body { margin: 0; overflow: hidden; }
+        canvas { display: block; width: 100vw; height: 100vh; }
+    </style>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.164.1/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.164.1/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+    <canvas id="game-canvas"></canvas>
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // Basic scene setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x90EE90); // Light green background
+
+        const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+        const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('game-canvas'), antialias: true });
+        renderer.setSize( window.innerWidth, window.innerHeight );
+        renderer.shadowMap.enabled = true;
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.9);
+        directionalLight.position.set(20, 30, 20);
+        directionalLight.castShadow = true;
+        scene.add(directionalLight);
+
+        // Controls
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+
+        // --- Scene Content from SandboxScene.jsx ---
+
+        // Large ground plane
+        const planeGeometry = new THREE.PlaneGeometry(200, 200);
+        const planeMaterial = new THREE.MeshStandardMaterial({ color: "lightgreen" }); // Keeping original color
+        const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+        plane.rotation.x = -Math.PI / 2;
+        plane.position.y = -0.5;
+        plane.receiveShadow = true;
+        scene.add(plane);
+
+        // Example starting object (Box)
+        const startObjectGeometry = new THREE.BoxGeometry(2, 2, 2);
+        const startObjectMaterial = new THREE.MeshStandardMaterial({ color: "white" });
+        const startObject = new THREE.Mesh(startObjectGeometry, startObjectMaterial);
+        startObject.position.set(0, 0.5, 0); // y = height/2 + ground_offset = 2/2 - 0.5 = 0.5. Original JSX had y=1, keeping 0.5.
+        startObject.castShadow = true;
+        startObject.receiveShadow = true; // Larger objects might receive shadows too
+        scene.add(startObject);
+
+        // Placeholder for dynamically added objects
+        // Example:
+        // const dynamicBoxGeo = new THREE.BoxGeometry(1, 1, 1);
+        // const dynamicBoxMat = new THREE.MeshStandardMaterial({ color: 'brown' });
+        // const dynamicBox = new THREE.Mesh(dynamicBoxGeo, dynamicBoxMat);
+        // dynamicBox.position.set(10, 0, 10); // y = 1/2 - 0.5 = 0
+        // scene.add(dynamicBox);
+
+        // --- End Scene Content ---
+
+        camera.position.set(0, 10, 20); // Adjust camera
+        controls.update();
+
+        function animate() {
+            requestAnimationFrame( animate );
+            controls.update();
+            renderer.render( scene, camera );
+        }
+        animate();
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+.logo.vite:hover {
+  filter: drop-shadow(0 0 2em #747bff);
+}
+
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafb);
+}
+
+/* Keep logo styles from original template if needed elsewhere */
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: 0.75s;
+}
+
+.logo.tauri:hover {
+  filter: drop-shadow(0 0 2em #24c8db);
+}
+
+/* Removed :root, .container, a, h1, input, button, dark mode styles etc. */
+/* These are now handled by Tailwind base/utilities or component-specific styling */

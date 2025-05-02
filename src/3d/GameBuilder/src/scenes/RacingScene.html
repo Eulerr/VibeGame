@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Racing Scene</title> <!-- Updated Title -->
+    <style>
+        body { margin: 0; overflow: hidden; }
+        canvas { display: block; width: 100vw; height: 100vh; }
+    </style>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.164.1/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.164.1/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+    <canvas id="game-canvas"></canvas>
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // Basic scene setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x333333); // Dark gray background
+
+        const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+        const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('game-canvas'), antialias: true });
+        renderer.setSize( window.innerWidth, window.innerHeight );
+        renderer.shadowMap.enabled = true;
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(-10, 15, 10);
+        directionalLight.castShadow = true;
+        scene.add(directionalLight);
+
+        // Controls
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+
+        // --- Scene Content from RacingScene.jsx ---
+
+        // Basic ground plane
+        const planeGeometry = new THREE.PlaneGeometry(100, 100);
+        // Using a slightly different gray than the background for contrast
+        const planeMaterial = new THREE.MeshStandardMaterial({ color: "darkgray" });
+        const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+        plane.rotation.x = -Math.PI / 2;
+        plane.position.y = -0.5;
+        plane.receiveShadow = true;
+        scene.add(plane);
+
+        // Example Track Element (Torus)
+        // Note: The original JSX used 'asphalt' color, which isn't a standard THREE color name. Using a dark gray.
+        const trackMaterial = new THREE.MeshStandardMaterial({ color: 0x444444 }); // Dark gray for asphalt
+        const trackGeometry = new THREE.TorusGeometry(10, 1, 16, 100);
+        const track = new THREE.Mesh(trackGeometry, trackMaterial);
+        track.rotation.x = -Math.PI / 2; // Rotate to lay flat
+        track.position.y = -0.4; // Slightly above the ground plane
+        track.receiveShadow = true; // Track can receive shadows
+        scene.add(track);
+
+        // Example Car Placeholder (Box) - Original Car on Track
+        const carGeometry = new THREE.BoxGeometry(2, 0.5, 1);
+        const carMaterial = new THREE.MeshStandardMaterial({ color: "red" });
+        const car = new THREE.Mesh(carGeometry, carMaterial);
+        // Position on the track (adjust x/z based on torus radius)
+        car.position.set(10, -0.2, 0); // y = height/2 + ground_offset = 0.5/2 - 0.5 = -0.25. Original JSX had -0.2, keeping it.
+        car.castShadow = true;
+        scene.add(car);
+
+        // --- Add a new car at the center ---
+        const carCenterGeometry = new THREE.BoxGeometry(2, 0.5, 1); // Same dimensions
+        const carCenterMaterial = new THREE.MeshStandardMaterial({ color: "blue" }); // Different color
+        const carCenter = new THREE.Mesh(carCenterGeometry, carCenterMaterial);
+        // Position at the center (0,0) horizontally.
+        // y = ground_plane_y + car_height/2 = -0.5 + 0.5/2 = -0.25
+        carCenter.position.set(0, -0.25, 0);
+        carCenter.castShadow = true;
+        scene.add(carCenter);
+        // --- End add new car ---
+
+
+        // Placeholder for dynamically added objects
+        // Example:
+        // const dynamicBoxGeo = new THREE.BoxGeometry(1, 1, 1);
+        // const dynamicBoxMat = new THREE.MeshStandardMaterial({ color: 'blue' });
+        // const dynamicBox = new THREE.Mesh(dynamicBoxGeo, dynamicBoxMat);
+        // dynamicBox.position.set(-8, 0, -8); // y = 1/2 - 0.5 = 0
+        // scene.add(dynamicBox);
+
+        // --- End Scene Content ---
+
+        camera.position.set(0, 10, 25); // Adjust camera
+        controls.update();
+
+        function animate() {
+            requestAnimationFrame( animate );
+            controls.update();
+            renderer.render( scene, camera );
+        }
+        animate();
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+    </script>
+</body>
+</html>

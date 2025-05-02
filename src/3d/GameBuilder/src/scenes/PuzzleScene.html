@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Puzzle Scene</title> <!-- Updated Title -->
+    <style>
+        body { margin: 0; overflow: hidden; }
+        canvas { display: block; width: 100vw; height: 100vh; }
+    </style>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.164.1/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.164.1/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+    <canvas id="game-canvas"></canvas>
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // Basic scene setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xF5F5DC); // Beige background
+
+        const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+        const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('game-canvas'), antialias: true });
+        renderer.setSize( window.innerWidth, window.innerHeight );
+        renderer.shadowMap.enabled = true;
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+        scene.add(ambientLight);
+        const pointLight = new THREE.PointLight(0xffffff, 0.8, 50); // Point light for room interior
+        pointLight.position.set(0, 4, 0);
+        pointLight.castShadow = true;
+        scene.add(pointLight);
+
+        // Controls
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.target.set(0, 1, 0); // Target center of the room
+
+        // --- Scene Content from PuzzleScene.jsx ---
+
+        // Room-like environment (Floor)
+        const floorGeometry = new THREE.PlaneGeometry(20, 20);
+        const floorMaterial = new THREE.MeshStandardMaterial({ color: "beige" });
+        const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+        floor.rotation.x = -Math.PI / 2;
+        floor.position.y = -0.5;
+        floor.receiveShadow = true;
+        scene.add(floor);
+
+        // Walls
+        const wallMaterial = new THREE.MeshStandardMaterial({ color: "lightgray" });
+        const wallHeight = 5;
+        const wallThickness = 0.2;
+        const roomSize = 20;
+
+        // Wall -X
+        const wallGeo1 = new THREE.BoxGeometry(wallThickness, wallHeight, roomSize);
+        const wall1 = new THREE.Mesh(wallGeo1, wallMaterial);
+        wall1.position.set(-roomSize / 2, wallHeight / 2 - 0.5, 0);
+        wall1.receiveShadow = true;
+        scene.add(wall1);
+
+        // Wall +X
+        const wallGeo2 = new THREE.BoxGeometry(wallThickness, wallHeight, roomSize);
+        const wall2 = new THREE.Mesh(wallGeo2, wallMaterial);
+        wall2.position.set(roomSize / 2, wallHeight / 2 - 0.5, 0);
+        wall2.receiveShadow = true;
+        scene.add(wall2);
+
+        // Wall -Z
+        const wallGeo3 = new THREE.BoxGeometry(roomSize, wallHeight, wallThickness);
+        const wall3 = new THREE.Mesh(wallGeo3, wallMaterial);
+        wall3.position.set(0, wallHeight / 2 - 0.5, -roomSize / 2);
+        wall3.receiveShadow = true;
+        scene.add(wall3);
+
+        // Wall +Z
+        const wallGeo4 = new THREE.BoxGeometry(roomSize, wallHeight, wallThickness);
+        const wall4 = new THREE.Mesh(wallGeo4, wallMaterial);
+        wall4.position.set(0, wallHeight / 2 - 0.5, roomSize / 2);
+        wall4.receiveShadow = true;
+        scene.add(wall4);
+
+
+        // Example Puzzle Element (Box)
+        const puzzleElementGeometry = new THREE.BoxGeometry(1, 1, 1);
+        const puzzleElementMaterial = new THREE.MeshStandardMaterial({ color: "cyan" });
+        const puzzleElement = new THREE.Mesh(puzzleElementGeometry, puzzleElementMaterial);
+        puzzleElement.position.set(0, 0, 5); // y = height/2 + ground_offset = 1/2 - 0.5 = 0. Original JSX had y=0.5, keeping 0.
+        puzzleElement.castShadow = true;
+        scene.add(puzzleElement);
+
+        // Placeholder for dynamically added objects
+        // Example:
+        // const dynamicBoxGeo = new THREE.BoxGeometry(1, 1, 1);
+        // const dynamicBoxMat = new THREE.MeshStandardMaterial({ color: 'magenta' });
+        // const dynamicBox = new THREE.Mesh(dynamicBoxGeo, dynamicBoxMat);
+        // dynamicBox.position.set(3, 0, -3); // y = 1/2 - 0.5 = 0
+        // scene.add(dynamicBox);
+
+        // --- End Scene Content ---
+
+        camera.position.set(0, 3, 12); // Position camera inside the room view
+        controls.update();
+
+        function animate() {
+            requestAnimationFrame( animate );
+            controls.update();
+            renderer.render( scene, camera );
+        }
+        animate();
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+    </script>
+</body>
+</html>

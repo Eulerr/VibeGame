@@ -1,0 +1,3 @@
+This directory is intended for 3D models (e.g., .glb, .gltf), textures, and other game assets.
+
+Replace this file with actual assets required by your scene components.

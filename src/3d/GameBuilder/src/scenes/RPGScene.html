@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RPG Scene</title> <!-- Updated Title -->
+    <style>
+        body { margin: 0; overflow: hidden; }
+        canvas { display: block; width: 100vw; height: 100vh; }
+    </style>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.164.1/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.164.1/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+    <canvas id="game-canvas"></canvas>
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // Basic scene setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x696969); // Slategray background
+
+        const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+        const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('game-canvas'), antialias: true });
+        renderer.setSize( window.innerWidth, window.innerHeight );
+        renderer.shadowMap.enabled = true;
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
+        directionalLight.position.set(15, 20, 10);
+        directionalLight.castShadow = true;
+        // Optional: Configure shadow properties
+        directionalLight.shadow.mapSize.width = 1024;
+        directionalLight.shadow.mapSize.height = 1024;
+        directionalLight.shadow.camera.near = 0.5;
+        directionalLight.shadow.camera.far = 50;
+        scene.add(directionalLight);
+
+        // Controls
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+
+        // --- Scene Content from RPGScene.jsx ---
+
+        // Cobblestone-like ground
+        const planeGeometry = new THREE.PlaneGeometry(80, 80);
+        const planeMaterial = new THREE.MeshStandardMaterial({ color: "slategray" });
+        const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+        plane.rotation.x = -Math.PI / 2;
+        plane.position.y = -0.5;
+        plane.receiveShadow = true;
+        scene.add(plane);
+
+        // Example Building Placeholder (Box)
+        const buildingGeometry = new THREE.BoxGeometry(10, 8, 10);
+        const buildingMaterial = new THREE.MeshStandardMaterial({ color: "burlywood" });
+        const building = new THREE.Mesh(buildingGeometry, buildingMaterial);
+        building.position.set(-15, 3.5, -15); // y = height/2 + ground_offset = 8/2 - 0.5 = 3.5
+        building.castShadow = true;
+        building.receiveShadow = true;
+        scene.add(building);
+
+        // Example Tower Placeholder (Cylinder)
+        const towerGeometry = new THREE.CylinderGeometry(3, 3, 12, 16);
+        const towerMaterial = new THREE.MeshStandardMaterial({ color: "darkred" });
+        const tower = new THREE.Mesh(towerGeometry, towerMaterial);
+        tower.position.set(10, 5.5, 10); // y = height/2 + ground_offset = 12/2 - 0.5 = 5.5
+        tower.castShadow = true;
+        tower.receiveShadow = true;
+        scene.add(tower);
+
+        // Example NPC Placeholder (Box)
+        const npcGeometry = new THREE.BoxGeometry(0.7, 1.6, 0.7);
+        const npcMaterial = new THREE.MeshStandardMaterial({ color: "green" });
+        const npc = new THREE.Mesh(npcGeometry, npcMaterial);
+        npc.position.set(2, 0.3, 2); // y = height/2 + ground_offset = 1.6/2 - 0.5 = 0.3
+        npc.castShadow = true;
+        scene.add(npc);
+
+        // Placeholder for dynamically added objects
+        // Example:
+        // const dynamicBoxGeo = new THREE.BoxGeometry(1, 1, 1);
+        // const dynamicBoxMat = new THREE.MeshStandardMaterial({ color: 'purple' });
+        // const dynamicBox = new THREE.Mesh(dynamicBoxGeo, dynamicBoxMat);
+        // dynamicBox.position.set(5, 0, -5); // y = 1/2 - 0.5 = 0
+        // scene.add(dynamicBox);
+
+        // --- End Scene Content ---
+
+        camera.position.set(0, 15, 30); // Adjust camera
+        controls.update();
+
+        function animate() {
+            requestAnimationFrame( animate );
+            controls.update();
+            renderer.render( scene, camera );
+        }
+        animate();
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Survival Scene</title> <!-- Updated Title -->
+    <style>
+        body { margin: 0; overflow: hidden; }
+        canvas { display: block; width: 100vw; height: 100vh; }
+    </style>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.164.1/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.164.1/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+    <canvas id="game-canvas"></canvas>
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // Basic scene setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xD2B48C); // Tan background
+
+        const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+        const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('game-canvas'), antialias: true });
+        renderer.setSize( window.innerWidth, window.innerHeight );
+        renderer.shadowMap.enabled = true;
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.9);
+        directionalLight.position.set(10, 20, 15);
+        directionalLight.castShadow = true;
+        scene.add(directionalLight);
+
+        // Controls
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+
+        // --- Scene Content from SurvivalScene.jsx ---
+
+        // Barren ground plane
+        const planeGeometry = new THREE.PlaneGeometry(150, 150);
+        const planeMaterial = new THREE.MeshStandardMaterial({ color: "tan" }); // Keeping original color
+        const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+        plane.rotation.x = -Math.PI / 2;
+        plane.position.y = -0.5;
+        plane.receiveShadow = true;
+        scene.add(plane);
+
+        // Example Rock Placeholders (Spheres)
+        const rockMaterial1 = new THREE.MeshStandardMaterial({ color: "dimgray" });
+        const rockGeometry1 = new THREE.SphereGeometry(2, 16, 16);
+        const rock1 = new THREE.Mesh(rockGeometry1, rockMaterial1);
+        // y = radius + ground_offset = 2 - 0.5 = 1.5. Matches original JSX.
+        rock1.position.set(-10, 1.5, -10);
+        rock1.castShadow = true;
+        rock1.receiveShadow = true;
+        scene.add(rock1);
+
+        const rockMaterial2 = new THREE.MeshStandardMaterial({ color: "darkgray" });
+        const rockGeometry2 = new THREE.SphereGeometry(1, 16, 16);
+        const rock2 = new THREE.Mesh(rockGeometry2, rockMaterial2);
+        // y = radius + ground_offset = 1 - 0.5 = 0.5. Original JSX had y=0, keeping 0.5.
+        rock2.position.set(5, 0.5, 8);
+        rock2.castShadow = true;
+        rock2.receiveShadow = true;
+        scene.add(rock2);
+
+        // Example Resource Placeholder (Box)
+        const resourceGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+        const resourceMaterial = new THREE.MeshStandardMaterial({ color: "gold" });
+        const resource = new THREE.Mesh(resourceGeometry, resourceMaterial);
+        // y = height/2 + ground_offset = 0.5/2 - 0.5 = -0.25. Matches original JSX.
+        resource.position.set(0, -0.25, 3);
+        resource.castShadow = true;
+        scene.add(resource);
+
+        // Placeholder for dynamically added objects
+        // Example:
+        // const dynamicBoxGeo = new THREE.BoxGeometry(1, 1, 1);
+        // const dynamicBoxMat = new THREE.MeshStandardMaterial({ color: 'olive' });
+        // const dynamicBox = new THREE.Mesh(dynamicBoxGeo, dynamicBoxMat);
+        // dynamicBox.position.set(-15, 0, 15); // y = 1/2 - 0.5 = 0
+        // scene.add(dynamicBox);
+
+        // --- End Scene Content ---
+
+        camera.position.set(0, 15, 25); // Adjust camera
+        controls.update();
+
+        function animate() {
+            requestAnimationFrame( animate );
+            controls.update();
+            renderer.render( scene, camera );
+        }
+        animate();
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+    </script>
+</body>
+</html>
