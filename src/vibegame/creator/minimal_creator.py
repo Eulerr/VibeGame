@@ -112,7 +112,6 @@ class GameCreator:
             if response_text.endswith('```'):
                 response_text = response_text[:-3]
             game_config = json.loads(response_text)
-            self.config.save(game_config)
             return game_config
         except Exception as e:
             print(f"Error: {e}")

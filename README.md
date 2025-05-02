@@ -17,13 +17,18 @@ git clone https://github.com/yourusername/VibeGame.git
 cd VibeGame
 ```
 
-2. Install dependencies:
+2. Create and activate virtual environment:
 ```bash
 uv venv
-uv pip install -e .
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 ```
 
-3. Set up your Gemini API key:
+3. Install the package in development mode:
+```bash
+uv pip install -e ".[dev]"
+```
+
+4. Set up your Gemini API key:
 ```bash
 export GEMINI_API_KEY="your-api-key-here"
 ```
@@ -32,7 +37,7 @@ export GEMINI_API_KEY="your-api-key-here"
 
 1. Run the game creation pipeline:
 ```bash
-python -m vibegame
+python -m src.vibegame
 ```
 
 2. Or use the components individually:
