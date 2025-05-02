@@ -10,13 +10,13 @@ This directory contains example reinforcement learning scripts using Gymnasium a
     ```
 
 2.  **Create and activate a Python virtual environment:**
-> hint... you may want to use `uv` to set this up as its way cleaner and faster
-    *   **macOS / Linux (bash/zsh):**
+    > hint... you may want to use `uv` to set this up as its way cleaner and
+    -   **macOS / Linux (bash/zsh):**
         ```bash
         python3 -m venv .venv
         source .venv/bin/activate
         ```
-    *   **Windows (PowerShell):**
+    -   **Windows (PowerShell):**
         ```powershell
         python -m venv .venv
         .\.venv\Scripts\Activate.ps1
