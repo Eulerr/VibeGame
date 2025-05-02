@@ -106,7 +106,6 @@ GameBuilder/
     ```bash
     npm run tauri build
     ```
-3.  The distributable application (e.g., `.app`, `.exe`, `.deb`) will be located in `GameBuilder/src-tauri/target/release/bundle/`.
 
 ## Usage
 
@@ -117,13 +116,6 @@ GameBuilder/
 5.  Observe the scene update based on the (mock) AI response.
 6.  Click the "Save Game" button in the header, enter a name, and the configuration will be saved to the database via the backend server.
 7.  (Export functionality is basic - it saves a script file in `src-tauri/exports/` but requires manual retrieval and a proper runtime).
-
-## Troubleshooting
-
--   **Dependency Errors**: Ensure you ran `npm install` successfully (see Setup section). Try deleting `node_modules` and `package-lock.json` and running `npm install` again.
--   **Server Connection Error**: Make sure the Node.js server (`node src-tauri/server.js`) is running in a separate terminal before starting the Tauri app (`npm run tauri dev`). Check the console for errors from `server.js`.
--   **Tauri Build Issues**: Ensure all Tauri prerequisites for your OS are installed correctly. Check the Tauri documentation.
--   **Missing Assets**: This version uses placeholder 3D objects. Actual 3D models (`.glb`, `.gltf`) should be placed in `src-tauri/assets/` and loaded appropriately in the scene components.
 
 ## Notes
 
