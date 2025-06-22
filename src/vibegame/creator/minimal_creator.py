@@ -9,7 +9,7 @@ class GameCreator:
     
     def __init__(self, api_key: str):
         genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel('gemini-2.5-pro-exp-03-25')
+        self.model = genai.GenerativeModel('gemini-2.5-flash-preview-04-17')
         self.config = GameConfig()
     
     def create_game(self, description: str) -> dict:
@@ -107,13 +107,27 @@ class GameCreator:
         try:
             response = self.model.generate_content(prompt)
             response_text = response.text.strip()
+            
+            # Clean up the response text
             if response_text.startswith('```json'):
                 response_text = response_text[7:]
             if response_text.endswith('```'):
                 response_text = response_text[:-3]
+            
+            # Parse the JSON
             game_config = json.loads(response_text)
+            
+            # Save the configuration
+            with open('game_config.json', 'w') as f:
+                json.dump(game_config, f, indent=2)
+            
             return game_config
+            
+        except json.JSONDecodeError as e:
+            print(f"Error parsing JSON: {e}")
+            print("Raw response:", response.text)
+            raise
         except Exception as e:
             print(f"Error: {e}")
-            print("Raw response:", response.text if 'response' in locals() else "No response")
-            return None 
+            print("Raw response:", response.text)
+            raise 

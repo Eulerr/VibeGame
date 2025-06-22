@@ -26,15 +26,21 @@ class GameRunner:
     
     def _clean_code(self, code: str) -> str:
         """Clean the generated code by removing markdown and comments."""
-        # Remove markdown code block markers
+        # Remove markdown code block markers and explanations
         code = re.sub(r'```python\n?', '', code)
         code = re.sub(r'```\n?', '', code)
         
-        # Remove markdown-style comments
+        # Remove markdown-style comments and explanations
         code = re.sub(r'\*.*\*', '', code)
         code = re.sub(r'#.*\*.*\*', '', code)
+        code = re.sub(r'This implementation.*?\.', '', code, flags=re.DOTALL)
+        code = re.sub(r'This is crucial.*?\.', '', code, flags=re.DOTALL)
         
-        # Remove empty lines
+        # Fix common syntax errors
+        code = re.sub(r'(\w+)2', r'\1**2', code)  # Fix x2 to x**2
+        code = re.sub(r'(\w+)\s+(\w+)', r'\1 * \2', code)  # Fix implicit multiplication
+        
+        # Remove empty lines and extra whitespace
         code = '\n'.join(line for line in code.split('\n') if line.strip())
         
         return code

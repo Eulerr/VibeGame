@@ -1,137 +1,84 @@
-"""Game implementation generator using Gemini."""
+"""Game generator that creates game implementations from configurations."""
 
 import json
+import os
+import re
+from typing import Dict, Any
 import google.generativeai as genai
-from typing import Dict, List, Set
-from pathlib import Path
-from ..core.config import GameConfig
 
 class GameGenerator:
     """Generates game implementations from configurations."""
     
     def __init__(self, api_key: str):
-        print("Initializing GameGenerator...")
+        """Initialize the game generator."""
         genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel('gemini-2.5-pro-exp-03-25')
-        self.config = GameConfig()
-        self.components = {
-            "movement": {},
-            "combat": {},
-            "physics": {},
-            "ai": {}
-        }
-        print("GameGenerator initialized successfully")
-
-    def generate_component(self, component_type: str, requirements: Dict) -> Dict:
-        """Generate a specific game component using Gemini."""
-        print(f"\nGenerating {component_type} component...")
-        print(f"Requirements: {json.dumps(requirements, indent=2)}")
+        self.model = genai.GenerativeModel('gemini-2.5-flash-preview-04-17')
+    
+    def _clean_code(self, code: str) -> str:
+        """Clean the generated code by removing asterisks and fixing syntax."""
+        # Remove all asterisks
+        code = re.sub(r'\*', '', code)
         
+        # Fix common syntax issues
+        code = re.sub(r'from\s+typing\s+import\s+\*', 'from typing import Dict, Any', code)
+        code = re.sub(r'class\s+(\w+):', r'class \1:', code)
+        code = re.sub(r'def\s+(\w+):', r'def \1:', code)
+        
+        # Remove empty lines and extra whitespace
+        code = '\n'.join(line for line in code.split('\n') if line.strip())
+        
+        return code
+    
+    def _generate_component_code(self, component_type: str, config: Dict[str, Any]) -> str:
+        """Generate code for a specific component."""
         prompt = f"""
-        Create a {component_type} component for a game with these requirements:
-        {json.dumps(requirements, indent=2)}
+        Generate Python code for a {component_type} component based on this configuration:
+        {json.dumps(config, indent=2)}
         
-        Return a Python class implementation with:
-        1. Required imports
-        2. Class definition with proper inheritance
-        3. Initialization method
-        4. Core functionality methods
-        5. Type hints and docstrings
+        IMPORTANT: 
+        1. Output ONLY raw Python code - no markdown, no asterisks, no emphasis
+        2. Use proper Python syntax and type hints
+        3. Include necessary imports
+        4. Follow PEP 8 style guidelines
+        5. Make sure all mathematical expressions use proper operators (e.g., x**2 not x2)
+        6. Do not use any markdown formatting or emphasis characters (*)
+        7. Do not include any explanations or comments
         
-        The code should be production-ready and follow Python best practices.
+        Example of correct format:
+        from typing import Dict, Any
+        
+        class Component:
+            def __init__(self, config: Dict[str, Any]):
+                self.speed = config.get('speed', 0.0)
+        
+        Example of INCORRECT format (do not use):
+        from * typing import * Dict, Any * class Component:
+            def * __init__(self, config: Dict[str, Any]):
+                self.speed = config.get('speed', 0.0)
         """
         
-        print("Sending prompt to Gemini...")
         response = self.model.generate_content(prompt)
-        print("Received response from Gemini")
+        return self._clean_code(response.text)
+    
+    def generate_game(self, config_path: str = "game_config.json") -> Dict[str, Any]:
+        """Generate a complete game implementation."""
+        print("Generating game implementation...")
         
-        code = response.text
-        print(f"Generated code length: {len(code)} characters")
+        # Load game configuration
+        with open(config_path, 'r') as f:
+            config = json.load(f)
         
-        dependencies = self._extract_dependencies(code)
-        print(f"Extracted dependencies: {dependencies}")
+        # Generate components
+        components = {}
+        for component_type, component_config in config["mechanics"].items():
+            print(f"Generating {component_type} component...")
+            code = self._generate_component_code(component_type, component_config)
+            components[component_type] = {"code": code}
         
-        return {
-            "code": code,
-            "dependencies": dependencies
-        }
-
-    def _extract_dependencies(self, code: str) -> List[str]:
-        """Extract required dependencies from generated code."""
-        print("Extracting dependencies from code...")
-        dependencies: Set[str] = set()
-        if "import pygame" in code:
-            dependencies.add("pygame")
-        if "import numpy" in code:
-            dependencies.add("numpy")
-        return list(dependencies)
-
-    def generate_game(self) -> Dict:
-        """Generate complete game implementation."""
-        print("\nStarting game generation...")
-        game_config = self.config.load()
-        print("Loaded game configuration")
-        
-        if not game_config:
-            raise ValueError("No game configuration found. Please create one first.")
-            
-        game_components = {}
-        all_dependencies: Set[str] = set()
-        
-        # Generate movement component
-        if "movement" in game_config["mechanics"]:
-            print("\nGenerating movement component...")
-            movement = self.generate_component("movement", game_config["mechanics"]["movement"])
-            game_components["movement"] = movement
-            all_dependencies.update(movement["dependencies"])
-            print("Movement component generated")
-        
-        # Generate combat component
-        if "combat" in game_config["mechanics"]:
-            print("\nGenerating combat component...")
-            combat = self.generate_component("combat", game_config["mechanics"]["combat"])
-            game_components["combat"] = combat
-            all_dependencies.update(combat["dependencies"])
-            print("Combat component generated")
-        
-        # Generate physics component based on game type
-        print("\nGenerating physics component...")
-        physics_reqs = {
-            "type": game_config["game_type"],
-            "settings": game_config["mechanics"].get("movement", {})
-        }
-        physics = self.generate_component("physics", physics_reqs)
-        game_components["physics"] = physics
-        all_dependencies.update(physics["dependencies"])
-        print("Physics component generated")
-        
-        # Generate AI component if enemies exist
-        if game_config["assets"].get("enemies"):
-            print("\nGenerating AI component...")
-            ai_reqs = {
-                "enemy_types": game_config["assets"]["enemies"],
-                "difficulty": game_config["level_design"]["difficulty"]
-            }
-            ai = self.generate_component("ai", ai_reqs)
-            game_components["ai"] = ai
-            all_dependencies.update(ai["dependencies"])
-            print("AI component generated")
-        
-        implementation = {
-            "components": game_components,
-            "dependencies": list(all_dependencies)
-        }
-        
-        print("\nSaving implementation...")
-        with open('game_implementation.json', 'w') as f:
+        # Save implementation
+        implementation = {"components": components}
+        with open("game_implementation.json", 'w') as f:
             json.dump(implementation, f, indent=2)
-        print("Implementation saved to game_implementation.json")
         
-        print("\nSaving requirements...")
-        with open('requirements.txt', 'w') as f:
-            for dep in implementation["dependencies"]:
-                f.write(f"{dep}\n")
-        print("Requirements saved to requirements.txt")
-        
-        print("\nGame generation completed successfully!")
+        print("Game implementation generated successfully!")
         return implementation 
